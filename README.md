@@ -104,7 +104,7 @@
 > Method : POST
 >
 
-#### Request
+#### - Request
 
 #### Header 
 
@@ -120,7 +120,7 @@
 | amount | Number | Y        |
 | winner | Number | Y        |
 
-#### Response
+#### - Response
 
 #### Parameter 
 
@@ -136,7 +136,7 @@
 > Method : PUT
 >
 
-#### Request
+#### - Request
 
 #### Header 
 
@@ -151,7 +151,7 @@
 | :--- | :------ | :--------------------- |
 | token | String | Y       |
 
-#### Response
+#### - Response
 
 #### Parameter 
 
@@ -166,7 +166,7 @@
 >
 > Method : GET
 
-#### Request
+#### - Request
 
 #### Header 
 
@@ -181,7 +181,7 @@
 | :--- | :------ | :--------------------- |
 | token | String | Y       |
 
-#### Response
+#### - Response
 
 #### Parameter 
 
