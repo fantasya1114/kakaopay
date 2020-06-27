@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.kakaopay.repo.EventMapper">
+    <select id="selectTest" resultType="java.lang.String">
+        SELECT 'GOD' AS NAME
+    </select>
+
+    <insert id="createEventMaster" parameterType="com.example.kakaopay.model.Event">
+        <selectKey keyProperty="token" resultType="java.lang.String" order="BEFORE">
+            SELECT SUBSTRING(MD5(RAND()) FROM 1 FOR 3)
+        </selectKey>
+        INSERT INTO EVENT_MASTER
+            (TOKEN, ROOM_ID, AMOUNT, WINNER, USER_ID, START_TIME, STATUS)
+            VALUE
+            (#{token}, #{roomId}, #{amount}, #{winner}, #{userId}, NOW(), 0)
+    </insert>
+
+    <insert id="createEventDetail" parameterType="com.example.kakaopay.model.Event">
+        <selectKey keyProperty="id" resultType="int" order="BEFORE">
+            SELECT IFNULL(MAX(ID), 0) + 1 FROM EVENT_DETAIL
+        </selectKey>
+        INSERT INTO EVENT_DETAIL
+        (ID, TOKEN, ROOM_ID, REWARD, UPDATE_TIME)
+        VALUE
+        (#{id}, #{token}, #{roomId}, #{reward}, NOW())
+    </insert>
+
+    <select id="checkEventUser" parameterType="com.example.kakaopay.model.Event" resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            ROOM_USER
+        WHERE
+            ROOM_ID = #{roomId}
+            AND USER_ID = #{userId}
+    </select>
+
+    <resultMap type="com.example.kakaopay.model.EventStatus" id="eventMasterResult">
+        <result property="amount" column="AMOUNT"/>
+        <result property="startTime" column="START_TIME"/>
+        <collection column="roomId=ROOM_ID,token=TOKEN" property="winners" javaType="List" ofType="com.example.kakaopay.model.Winner" select="selectWinners"/>
+    </resultMap>
+
+    <select id="selectEventMaster" parameterType="com.example.kakaopay.model.Event" resultMap="eventMasterResult">
+        SELECT
+            AMOUNT
+            , START_TIME
+            , ROOM_ID
+            , TOKEN
+        FROM
+            EVENT_MASTER
+        WHERE
+            ROOM_ID = #{roomId}
+            AND TOKEN = #{token}
+            AND STATUS = 0
+    </select>
+
+    <select id="selectWinners" resultType="com.example.kakaopay.model.Winner">
+        SELECT
+            USER_ID AS userId
+            , REWARD
+        FROM
+            EVENT_DETAIL
+        WHERE
+            ROOM_ID = #{roomId}
+            AND TOKEN = #{token}
+            AND USER_ID IS NOT NULL
+    </select>
+
+    <select id="checkEventPeriod" parameterType="com.example.kakaopay.model.Event" resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            EVENT_MASTER
+        WHERE
+            ROOM_ID = #{roomId}
+            AND TOKEN = #{token}
+            AND STATUS = 0
+            <![CDATA[
+                AND NOW() <= DATE_ADD(START_TIME, INTERVAL 10 MINUTE)
+            ]]>
+    </select>
+
+    <select id="checkEventStatus" parameterType="com.example.kakaopay.model.Event" resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            EVENT_MASTER
+        WHERE
+            ROOM_ID = #{roomId}
+            AND TOKEN = #{token}
+            AND USER_ID = #{userId}
+            AND STATUS = 0
+            <if test="checkInterval">
+            <![CDATA[
+                AND NOW() <= DATE_ADD(START_TIME, INTERVAL 7 DAY)
+            ]]>
+            </if>
+    </select>
+
+    <select id="selectEventDetail" parameterType="com.example.kakaopay.model.Event" resultType="int">
+        SELECT
+            IFNULL(
+                (SELECT
+                    DETAIL.ID
+                FROM
+                    EVENT_MASTER MASTER
+                    INNER JOIN EVENT_DETAIL DETAIL ON MASTER.TOKEN = DETAIL.TOKEN AND MASTER.ROOM_ID = DETAIL.ROOM_ID
+                WHERE
+                    MASTER.ROOM_ID = #{roomId}
+                    AND MASTER.TOKEN = #{token}
+                    AND MASTER.STATUS = 0
+                    <if test="checkUserId == 1">
+                        AND MASTER.USER_ID = #{userId}
+                    </if>
+                    <if test="checkUserId == 2">
+                        AND DETAIL.USER_ID = #{userId}
+                    </if>
+                    <if test="checkUserId == 3">
+                        AND DETAIL.USER_ID IS NULL
+                    </if>
+                LIMIT 1)
+            , 0)
+    </select>
+
+    <insert id="updateEventDetail" parameterType="com.example.kakaopay.model.Event">
+        <selectKey keyProperty="reward" resultType="long" order="BEFORE">
+            SELECT REWARD FROM EVENT_DETAIL WHERE ID = #{id}
+        </selectKey>
+        UPDATE
+            EVENT_DETAIL
+        SET
+            USER_ID = #{userId}, UPDATE_TIME = NOW()
+        WHERE
+            ID = #{id}
+    </insert>
+
+</mapper>
